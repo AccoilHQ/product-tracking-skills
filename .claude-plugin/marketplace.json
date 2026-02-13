@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "product-tracking-skills",
-      "source": ".",
+      "source": "./",
       "description": "Full product tracking lifecycle — model, audit, design, instrument, implement, and maintain tracking for B2B SaaS products.",
       "version": "0.5.0",
       "author": {
