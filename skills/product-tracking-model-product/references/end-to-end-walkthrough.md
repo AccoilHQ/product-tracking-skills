@@ -50,7 +50,7 @@ This walkthrough shows the complete product telemetry engineering lifecycle for 
 # Product: Clipper
 
 **Last updated:** 2026-02-08
-**Discovery by:** Product Telemetry Engineer
+**Discovery by:** Product Tracking Skills
 
 ## Product Identity
 
