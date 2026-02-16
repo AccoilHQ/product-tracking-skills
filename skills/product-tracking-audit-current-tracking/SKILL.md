@@ -5,7 +5,9 @@ description: >
   SDK calls, identity management, and instrumentation patterns to produce a factual
   inventory — not recommendations. Outputs .telemetry/current-state.yaml and a
   timestamped audit report. Use when the user wants to know what's currently tracked,
-  audit existing analytics, or capture tracking reality before designing a new plan.
+  audit existing analytics, capture tracking reality before designing a new plan,
+  'what analytics do we have,' 'what events are tracked,' 'scan for tracking,' or
+  'tracking inventory.'
 metadata:
   author: accoil
   version: "0.5"
@@ -19,6 +21,7 @@ You are a product telemetry engineer capturing the current state of tracking in 
 
 | File | What it covers | When to read |
 |------|---------------|--------------|
+| `references/output-formats.md` | Templates for all output files | Writing current-state.yaml, audit report, current-implementation.md |
 | `references/sdk-comparison.md` | Side-by-side SDK differences | Identifying which SDK is in use |
 | `references/implementation-architecture.md` | Centralized definitions, queue-based delivery | Understanding instrumentation patterns |
 | `references/anti-patterns.md` | PII in properties, noise events, redundancy | Noting hygiene issues (but not recommending) |
@@ -42,6 +45,8 @@ Output: `.telemetry/current-state.yaml` + `.telemetry/audits/YYYY-MM-DD.md`
 
 1. **`.telemetry/` folder** — If it doesn't exist, create it: `mkdir -p .telemetry/audits`
 2. **`.telemetry/product.md`** — If this file exists, read it for product context (entity model, feature areas) to make the audit more targeted. If it doesn't exist, proceed anyway — the audit can run without it, but suggest: *"No product model found. Consider running the **product-tracking-model-product** skill first for richer context (e.g., 'model this product') — but I can audit the codebase without it."*
+
+**Context inheritance:** Read `.telemetry/product.md` first if it exists. Present what you found as confirmation, not as new questions: "From the product model, I see this is a [language] [framework] codebase targeting [destinations]. Using [language]-appropriate detection patterns." Only ask if something is missing or ambiguous.
 
 ## Framing: Describe Reality
 
@@ -84,6 +89,8 @@ patterns:
 
 Write this to `.telemetry/current-state.yaml`, note "Greenfield — no existing tracking detected" in conversation, and suggest proceeding directly to the **product-tracking-design-tracking-plan** skill (e.g., *"design tracking plan"*). No audit report file is needed.
 
+Skip `.telemetry/current-implementation.md` for greenfield projects — there's no implementation to describe.
+
 If an SDK is detected, read the matching SDK reference before proceeding with the full audit.
 
 ### 2. Find All Tracking Calls
@@ -120,43 +127,11 @@ Look for:
 - `page()` / `screen()` calls — if present
 - Reset/logout handling
 
+For B2C products, group() calls may not exist — this is expected, not a gap. Focus on identify() and event patterns.
+
 ### 5. Map the Current State
 
-Build the reverse-engineered tracking plan:
-
-```yaml
-# Current State: reverse-engineered from codebase
-# Scanned: YYYY-MM-DD
-# SDK: [detected SDK]
-
-events:
-  - name: "[exact event name from code]"
-    status: LIVE  # or ORPHANED
-    locations:
-      - file: "src/auth/signup.ts"
-        line: 42
-    properties: [source, user_id]  # list format, must be valid YAML
-    source: frontend  # or backend
-
-  - name: "[next event]"
-    # ...
-
-identity:
-  identify_calls:
-    - location: "src/auth/login.ts:34"
-      traits_set: [email, name, role]
-  group_calls:
-    - location: "[file:line]"
-      group_type: "[type]"
-      traits_set: [name, plan]
-  # or: "No group() calls found"
-
-patterns:
-  naming_style: "[observed: camelCase / snake_case / mixed / Title Case]"
-  naming_format: "[observed: object.action / action_object / free-form / mixed]"
-  centralized: "[true/false — are tracking calls in a wrapper or scattered?]"
-  error_handling: "[try/catch present? non-blocking?]"
-```
+Build the reverse-engineered tracking plan in `.telemetry/current-state.yaml`. See [references/output-formats.md](references/output-formats.md) for the full YAML template. The file captures events (with name, status, locations, properties), identity management calls, and observed patterns.
 
 ### 6. Note Hygiene Observations (No Recommendations)
 
@@ -171,7 +146,7 @@ These are **observations**, not recommendations. State the fact, not the fix.
 
 ### 7. Capture Current Instrumentation Architecture
 
-Document how analytics is currently wired — not what events are tracked (that's in current-state.yaml), but how the SDK is set up and calls are routed. Write this as a "Current Implementation" section in `.telemetry/instrument.md`.
+Document how analytics is currently wired — not what events are tracked (that's in current-state.yaml), but how the SDK is set up and calls are routed. Write this to `.telemetry/current-implementation.md`. This is a standalone file that the **product-tracking-generate-implementation-guide** skill will read as input.
 
 Capture (as factual observations):
 - **SDK and version** — which package, which version
@@ -183,9 +158,7 @@ Capture (as factual observations):
 - **Error handling** — try/catch present? Non-blocking?
 - **Shutdown/flush** — handled or not?
 
-This is the same non-judgmental framing as the rest of the audit. Describe how it works, not whether it's right. The **product-tracking-generate-implementation-guide** skill will compare this against best practices.
-
-If `.telemetry/instrument.md` already exists, append to or update the "Current Implementation" section. Do not overwrite any existing target guide sections.
+This is the same non-judgmental framing as the rest of the audit. Describe how it works, not whether it's right. See [references/output-formats.md](references/output-formats.md) for the full template.
 
 ### 8. Generate Current-State Summary
 
@@ -193,93 +166,15 @@ Produce a human-readable summary alongside the YAML.
 
 ## Output
 
-### `.telemetry/current-state.yaml`
+### Output Formats
 
-The machine-readable reverse-engineered plan (format above).
+Detailed templates for all output files are in [references/output-formats.md](references/output-formats.md).
 
-### `.telemetry/instrument.md` (Current Implementation section)
+**`.telemetry/current-state.yaml`** — Machine-readable reverse-engineered tracking plan. Events with names, status (LIVE/ORPHANED), locations, properties. Identity management. Observed patterns.
 
-Append a "Current Implementation" section describing how analytics is currently wired:
+**`.telemetry/audits/YYYY-MM-DD.md`** — Human-readable audit report with event inventory table, identity management summary, observed patterns, and hygiene notes.
 
-```markdown
----
-
-## Current Implementation
-
-**SDK:** [name and version]
-**Captured:** YYYY-MM-DD
-
-### Initialization
-[Where and how the SDK is initialized. File paths, config patterns.]
-
-### Client vs Server
-[Where tracking calls are made — browser, server, or both.]
-
-### Call Routing
-[Direct SDK calls / centralized wrapper / queue-based / scattered]
-
-### Identity Management
-[How identify and group calls are made — on login, on page load, etc.]
-
-### Environment Variables
-[What config keys are used — e.g., SEGMENT_WRITE_KEY, ANALYTICS_API_KEY]
-
-### Error Handling
-[Try/catch present? Non-blocking? Silent failures?]
-
-### Shutdown / Flush
-[Handled or not? How?]
-```
-
-### `.telemetry/audits/YYYY-MM-DD.md`
-
-```markdown
-# Tracking Audit: YYYY-MM-DD
-
-**Codebase:** [path]
-**SDK:** [name and package]
-**Files scanned:** [count]
-
-## Current Tracking Inventory
-
-| # | Event Name | Category (inferred) | Locations | Properties |
-|---|-----------|--------------------|-----------|-----------|
-| 1 | `event_name` | [lifecycle/value/config/...] | `file:line` | prop1, prop2 |
-| ... | ... | ... | ... | ... |
-
-**Total events found:** [count]
-
-## Identity Management
-
-| Call Type | Present | Location | Details |
-|-----------|---------|----------|---------|
-| identify() | YES/NO | `file:line` | Traits: [list] |
-| group() | YES/NO | `file:line` | Group type: [type], Traits: [list] |
-| page()/screen() | YES/NO | `file:line` | [details] |
-| reset()/logout | YES/NO | `file:line` | [details] |
-
-## Observed Patterns
-
-- **Naming style:** [camelCase / snake_case / mixed / Title Case]
-- **Naming format:** [object.action / action_object / free-form / mixed]
-- **Centralization:** [wrapper/scattered] — [details]
-- **Error handling:** [present/absent/partial]
-- **Blocking calls:** [yes/no — are track calls awaited on critical paths?]
-
-## Hygiene Notes
-
-*Factual observations, not recommendations.*
-
-1. [Observation about duplicates, inconsistencies, etc.]
-2. [...]
-
-## Files Reviewed
-
-| File | Events Found | Identity Calls |
-|------|-------------|----------------|
-| `src/auth/signup.ts` | 2 | 1 identify |
-| ... | ... | ... |
-```
+**`.telemetry/current-implementation.md`** — How analytics is currently wired: SDK version, initialization, client vs server, call routing, identity management, env vars, error handling, shutdown/flush.
 
 ## Behavioral Rules
 
@@ -305,6 +200,10 @@ Append a "Current Implementation" section describing how analytics is currently 
 
 11. **Present decisions, not deliberation.** Reason silently. The user should see findings, not your search process.
 
+12. **Describe what works.** The current implementation section should highlight patterns worth preserving, not just document everything. If the existing implementation uses a clean centralized wrapper, note it — the implementation guide should build on what works rather than starting from scratch.
+
+13. **Note group hierarchy potential.** If the codebase reveals entity relationships (accounts → workspaces → projects), note which analytics systems handle group hierarchy well (Segment, Mixpanel, and PostHog support multi-level groups natively; Amplitude requires workarounds). This observation helps the design phase choose the right architecture.
+
 ## SDK Detection Quick Reference
 
 | SDK | Pattern | Package | Reference |
@@ -317,7 +216,20 @@ Append a "Current Implementation" section describing how analytics is currently 
 
 **Read the matching guide** before auditing — each SDK has different identity management, group calls, and configuration patterns.
 
+**Adapt detection patterns to the codebase language.** The patterns above use JavaScript conventions. Read `.telemetry/product.md` for the tech stack, then adjust:
+- **Ruby:** Check `Gemfile` for `analytics-ruby`, `segment`, `ahoy_matey`, `posthog-ruby`. Search for `Analytics.track(`, `Ahoy.track(`.
+- **Python:** Check `requirements.txt` / `pyproject.toml` for `analytics-python`, `posthog`, `mixpanel`, `amplitude-analytics`. Search for `analytics.track(`, `posthog.capture(`.
+- **Go:** Check `go.mod` for analytics SDKs. Search for SDK-specific method calls.
+- **Java:** Check `pom.xml` / `build.gradle` for analytics dependencies.
+
+## Lifecycle
+
+```
+model → audit → design → guide → implement ← feature updates
+         ^
+```
+
 ## Next Phase
 
 After audit, suggest the user run:
-- **product-tracking-design-tracking-plan** (e.g., *"design tracking plan"* or *"what should we track?"*) — decide what should be tracked (uses current state as input)
+- **product-tracking-design-tracking-plan** — decide what should be tracked, using current state as input (e.g., *"design tracking plan"*, *"what should we track?"*, *"create tracking plan"*)

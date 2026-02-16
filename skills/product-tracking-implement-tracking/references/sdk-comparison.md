@@ -564,7 +564,12 @@ process.on('SIGTERM', async () => {
 ---
 
 ## B2B-Specific Patterns
-
+Product Tracking – Model Product
+Product Tracking – Audit Current Tracking
+Product Tracking – Design Tracking Plan
+Product Tracking – Generate Implementation Guide
+Product Tracking – Implement Tracking
+Product Tracking – Instrument New Feature
 ### Account Context on Every Event
 For B2B apps, always include account context:
 

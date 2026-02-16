@@ -31,5 +31,5 @@ Each phase reads upstream artifacts and produces its own. Phases can be replayed
 
 ## Source
 
-Product Telemetry Engineer — a Claude Code skill set by Accoil.
-https://github.com/accoil/product-telemetry-engineer
+Product Tracking Skills — a Claude Code skill set by Accoil.
+https://github.com/AccoilHQ/product-tracking-skills

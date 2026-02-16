@@ -21,6 +21,3 @@ Accoil is account-centric. It calculates engagement scores at the account level.
 
 **Design implication:** The tracking plan MUST include group hierarchy with account as a top-level group. Every event should be attributable to an account.
 
-## Event Weighting
-
-Accoil weights events for engagement scoring (configured in Accoil's dashboard, not in code). When designing events, consider which represent high-value actions vs routine navigation — this affects how useful the scoring will be.
