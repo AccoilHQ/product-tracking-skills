@@ -235,7 +235,18 @@ git clone https://github.com/accoilhq/product-tracking-skills.git
 cp -r product-tracking-skills/skills/* .claude/skills/
 ```
 
-Once installed, open your codebase in any AI agent tool and say *"model this product"* to begin.
+Once installed, open your codebase in any AI agent tool and start with a prompt like this:
+
+### Example Prompt
+
+```
+Use the product-tracking skills to model this product, audit the current tracking,
+and design a complete tracking plan. Our tracking destination is Segment — use the
+Segment library. Track at the account and user level. Give me a complete, product 
+analytics tracking plan.
+```
+
+This runs the full skill chain — model, audit, design — and produces a tracking plan in `.telemetry/` ready for implementation.
 
 ---
 
