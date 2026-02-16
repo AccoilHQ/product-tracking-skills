@@ -5,8 +5,9 @@ description: >
   whether new events are needed, extends existing events with properties where possible,
   and produces a versioned mini-delta with changelog entry. Updates
   .telemetry/tracking-plan.yaml, delta.md, and changelog.md. Use when the user ships
-  a new feature, modifies existing functionality, or wants to keep tracking coherent
-  as the product evolves.
+  a new feature, modifies existing functionality, wants to keep tracking coherent
+  as the product evolves, 'feature shipped,' 'new feature tracking,' 'update tracking
+  for [feature],' 'what tracking does this feature need,' or 'instrument new feature.'
 metadata:
   author: accoil
   version: "0.5"
@@ -53,6 +54,8 @@ Output: updated `.telemetry/tracking-plan.yaml` + `.telemetry/delta.md` + `.tele
 | Audit findings to fix | Apply fixes from audit, update plan |
 | Periodic review | Check for stale events, coverage gaps |
 
+**Batching:** Multiple features can be assessed in a single session. Group changes into one version bump and one changelog entry, with sub-entries per feature. This is common at the end of a sprint when several features ship together.
+
 ## Process
 
 ### 1. Understand the Change
@@ -90,6 +93,8 @@ For new events:
 - Define properties with types
 - Set expected frequency
 - Assign group level
+
+For B2C products without group hierarchy, skip group-level assignment — events are user-level only.
 
 For modified events:
 - Assess breaking impact:
@@ -169,12 +174,14 @@ Append to `.telemetry/changelog.md`:
 
 If `.telemetry/delta.md` exists, add the new changes. Otherwise create it.
 
-### 8. Provide Implementation Guidance
+### 8. Document Implementation Locations
 
-For each new or changed event, provide:
-- Where in the codebase to add the tracking call
-- The exact function call with properties
-- Any identity/group context needed
+For each new or changed event, document in the delta:
+- **Where** in the codebase the tracking call should be added (file and function/handler)
+- **What** the event call should contain (event name, required properties, group context)
+- **Whether** identity or group calls need updating
+
+This provides the implementation roadmap. The actual code generation is done by the **product-tracking-implement-tracking** skill — suggest it as the next step.
 
 ## Versioning
 
@@ -230,8 +237,15 @@ Run the **product-tracking-implement-tracking** skill to update SDK wrapper (e.g
 
 9. **Present decisions, not deliberation.** Reason silently. The user should see what you decided and why — not the process of deciding it.
 
+## Lifecycle
+
+```
+model → audit → design → guide → implement ← feature updates
+                                                    ^
+```
+
 ## Next Phase
 
 After feature instrumentation, suggest the user run:
-- **product-tracking-implement-tracking** (e.g., *"implement tracking"* or *"generate code"*) — generate code for the new/changed events
-- **product-tracking-audit-current-tracking** (e.g., *"audit tracking"*) — verify everything matches
+- **product-tracking-implement-tracking** — generate or update code for the new/changed events (e.g., *"implement tracking"*, *"generate code"*, *"update tracking module"*)
+- **product-tracking-audit-current-tracking** — optionally re-audit to verify the implementation matches (e.g., *"audit tracking"*, *"verify tracking"*)

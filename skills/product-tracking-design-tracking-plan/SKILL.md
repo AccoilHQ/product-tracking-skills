@@ -5,8 +5,9 @@ description: >
   state to target. Combines the product model, current-state audit, and telemetry best
   practices to decide what events, properties, entities, and group hierarchies should
   exist. Outputs .telemetry/tracking-plan.yaml and .telemetry/delta.md. Use when the
-  user wants to create or redesign a tracking plan, decide what to track, or plan
-  analytics instrumentation.
+  user wants to create or redesign a tracking plan, decide what to track, plan
+  analytics instrumentation, 'design tracking,' 'what should we track,' 'create
+  tracking plan,' or 'plan analytics events.'
 metadata:
   author: accoil
   version: "0.5"
@@ -26,6 +27,7 @@ You are a product telemetry engineer designing the target tracking plan and prod
 | `references/common-mistakes.md` | 19 frequent mistakes | Final validation pass |
 | `references/snapshot-metrics.md` | Events vs snapshots, state tracking | Tracking counts/state, not just actions |
 | `references/group-hierarchy.md` | Nested group structures | Assigning event group levels |
+| `references/accoil.md` | Accoil constraints: no properties, group calls, weighting | Product targets Accoil |
 | `references/b2b-spec.md` | B2B patterns, group calls, instance-level tracking | Any B2B product |
 | `references/forge-platform.md` | Forge: cloudId groups, no UGC, sub-level context | Product runs on Atlassian Forge |
 
@@ -42,6 +44,8 @@ Category templates in `assets/` provide opinionated starting points. All extend 
 | `security-products.yaml` | Security, compliance, monitoring |
 | `collaboration-tools.yaml` | Team workspaces, real-time collab |
 | `analytics-platforms.yaml` | Analytics and BI products |
+
+**Output schema:** `assets/tracking-plan-schema.yaml` — the canonical structure for `.telemetry/tracking-plan.yaml`. Not a category starter; this defines the output format.
 
 ## Goal
 
@@ -78,42 +82,52 @@ Read `.telemetry/product.md` for the product model. Read `.telemetry/current-sta
 
 ### 2. Gather Context (Inherit Before Asking)
 
-Before designing anything, check upstream artifacts for answers to avoid re-asking what earlier phases established.
+Check upstream artifacts before asking the user. Don't re-ask what earlier phases established.
 
-**Check product model first:**
-Read `.telemetry/product.md`. Extract:
-- Product category, primary value action, entity model, group hierarchy
-- Integration targets (analytics destinations, platform)
-- Current state summary (existing tracking tool, known issues)
+**Read `.telemetry/product.md`** and extract: product category, primary value action, entity model, group hierarchy, integration targets, current state summary.
 
-If the product model already specifies analytics destinations (in the Integration Targets section), use those — don't re-ask. If the product model already states the platform (e.g., Forge), use that — don't re-ask.
+| Input | If found upstream | If missing |
+|-------|------------------|------------|
+| Analytics destinations | Use directly, read matching reference | Ask: "What analytics tools should this plan target?" |
+| Platform (e.g., Forge) | Use directly, read `references/forge-platform.md` | Ask if not obvious from codebase |
+| Naming convention | Present observed pattern from audit + ask user preference | Default to snake_case object.action |
 
-**Confirm product understanding:**
-"Based on the product model, I understand this is a [category] product where [primary value action] is the core action. [Entity model summary]. Does this look right?"
+**Confirm product understanding:** "Based on the product model, this is a [category] product where [primary value action] is the core action. [Entity summary]. Does this look right?"
 
-**Only ask what's missing:**
-- If destinations are not in product.md: "What analytics tools should this plan target? (e.g., Segment, PostHog, Accoil, Amplitude, Mixpanel)"
-- If platform is not in product.md: "Does this product run on Atlassian Forge?"
-- If both are already captured, skip straight to naming conventions.
+**Read destination references** before proceeding to event design. Each destination has constraints that affect design (e.g., Accoil does not store event properties). Available: `references/accoil.md`, `references/b2b-spec.md`, `references/forge-platform.md`.
 
-**Read destination references:**
-Once destinations are known (from product.md or user confirmation), you MUST read the matching reference file for each destination before proceeding to event design. These references contain destination-specific constraints that affect design decisions (e.g., Accoil does not store event properties — only event names).
+**Naming convention is a breaking change.** Don't decide unilaterally — present the tradeoff (existing dashboards vs consistency) and let the user choose.
 
-Available destination references:
-- Accoil → `references/accoil.md`
-- B2B SaaS patterns → `references/b2b-spec.md`
-- Forge platform → `references/forge-platform.md`
+**Greenfield shortcut:** If the current state is greenfield (no existing tracking), default to `object.action` snake_case — the most common, database-compatible convention. Note the decision and move on. Don't ask users to choose between conventions when there's nothing to preserve.
 
-Do NOT proceed to Step 3 until you have read every relevant reference.
+**PII policy.** Ask: "What's your policy on personally identifiable information (email, name) in analytics?" The answer shapes trait design and identity management:
 
-**If platform is Forge**, read `references/forge-platform.md`.
-Forge requires cloudId as the top-level group ID and prohibits any user-generated content in analytics.
+| Policy | Impact on Design |
+|--------|-----------------|
+| **No PII anywhere** | Use anonymous IDs only. No email/name in traits. Identify by user_id only. |
+| **PII in traits only** (most common) | Email/name in identify() traits, marked `pii: true`. Never in event properties. |
+| **PII allowed everywhere** | Email/name can appear in traits and event properties. Still mark `pii: true` for awareness. |
 
-**Ask about naming conventions:**
-Review the audit's observed naming patterns and present the choice:
-"The current codebase uses [observed pattern, e.g., 'Object - Action' Title Case]. Do you want to: (a) keep this convention, or (b) switch to [alternative, e.g., object.action snake_case]? Here's the tradeoff: [existing dashboards vs database compatibility]."
+Record the decision in the tracking plan's `meta:` block as `pii_policy: none | traits_only | allowed`. This flows into trait design (Step 6) and the instrumentation guide.
 
-Do not decide naming conventions unilaterally. This is a significant breaking change that affects existing dashboards and reports.
+**Internal user exclusion.** Ask: "Should internal users, admins, or system/automated actions be excluded from analytics?" Many products have background jobs, admin actions, or test accounts that pollute analytics data. Design the exclusion strategy:
+
+| Approach | Implementation |
+|----------|---------------|
+| **Exclude by role** | Filter out events from users with admin/system roles |
+| **Exclude by email domain** | Skip tracking for `@yourcompany.com` users |
+| **Exclude by flag** | `is_internal: true` trait on user, filter at tracking layer |
+| **No exclusion** | Track everything, filter in analytics tool |
+
+Record the decision in the tracking plan's `meta:` block as `internal_user_policy`. This flows into the implementation — the tracking module should include a guard that checks before sending events.
+
+**Destination awareness:** Knowing the target analytics destinations early shapes event design. For example:
+- **Accoil** — does not store event properties; event names must be self-descriptive (e.g., `report.created_from_template` not `report.created` with `{source: 'template'}`)
+- **Volume-billed platforms** (Amplitude, Mixpanel) — fewer events = lower cost; prefer properties over events
+- **CDPs** (Segment, RudderStack) — can route to multiple destinations; design once, deliver everywhere
+- **Multiple destinations** — if the plan targets 2+ destinations, recommend a CDP as the ingestion layer
+
+This doesn't need to be locked in — but having a likely destination in mind prevents rework.
 
 ### 3. Choose Starting Point
 
@@ -136,12 +150,16 @@ Work through each category systematically:
 
 **Collaboration (if multiplayer):**
 - Invites, sharing, team dynamics
+- Applies to both B2B team collaboration and B2C social features (sharing, following, commenting)
 
 **Configuration:**
 - Integration setup, settings changes, onboarding steps
 
-**Billing:**
-- Trial events, plan changes, limit warnings
+**Billing (always investigate — these are critical commercial signals):**
+- Trial events: `trial.started`, `trial.extended`, `trial.expired`
+- Plan changes: `plan.upgraded`, `plan.downgraded`, `plan.cancelled`
+- Limit events: `limit.reached`, `limit.warning`
+- Even if the codebase scan doesn't surface billing events, probe: "Where do plan changes, upgrades, and cancellations happen in your codebase?" Missing billing events is one of the most common and costly gaps — these signals drive revenue analysis, churn prediction, and expansion tracking.
 
 **Navigation (sparse — highest cost, lowest value):**
 - Feature access for adoption tracking
@@ -165,18 +183,48 @@ For each event:
 
 ### 6. Design Entity Traits
 
-Trait design happens here — not in product modeling. Draw from two sources:
+Trait design happens here — not in product modeling. Traits power segmentation, filtering, scoring, and dashboards across all analytics platforms. They deserve the same structured treatment as events.
+
+Draw from two sources:
 
 1. **Audit** (`.telemetry/current-state.yaml`) — what traits are already collected via identify() and group() calls
 2. **Product model** (`.telemetry/product.md`) — what entities exist and what would be useful to know about them
 
-For each entity type, consider:
-- **Snapshot metrics** — counts, usage stats, limits (e.g., `seats_used`, `integrations_connected_count`)
-- **Lifecycle dates** — `created_at`, `trial_end`, `last_active_at`
-- **Classification** — `plan`, `role`, `industry`, `account_type`
-- **PII** — `email`, `name` (mark as `pii: true`, only in traits via identify, never in event properties)
+**For each entity type (user, account, and each group level), design traits in four categories:**
+
+| Category | Examples | Update Pattern |
+|----------|---------|----------------|
+| **Snapshot metrics** — counts, usage stats, limits | `seats_used`, `integrations_connected_count`, `reports_created_count` | Scheduled (daily/hourly) |
+| **Lifecycle dates** | `created_at`, `trial_end`, `last_active_at`, `first_value_action_at` | Set once or on change |
+| **Classification** | `plan`, `role`, `industry`, `account_type`, `company_size` | Set once or on change |
+| **PII** | `email`, `name` — include based on PII policy from Step 2. Mark `pii: true`. If policy is `none`, skip these entirely. | Set on signup, update on change |
+
+**For each trait, specify:**
+- **Entity level:** user trait, account trait, or group trait (e.g., workspace-level)
+- **Update pattern:** one-time (set on creation), on-change (set when value changes), or scheduled (snapshot sync)
+- **Type:** string, integer, number, boolean, datetime
+- **Required:** true/false
 
 Read `references/snapshot-metrics.md` for guidance on state tracking vs event tracking.
+
+**Snapshot sync design.** Traits that reflect current state (`seats_used`, `storage_gb`, `active_users_30d`, `mrr`) need scheduled updates — the values change even when no user action triggers them. Design the snapshot sync explicitly:
+
+```yaml
+snapshot_sync:
+  cadence: daily  # or hourly for billing-critical
+  traits:
+    - entity: account
+      trait: seats_used
+      source: "COUNT of active users per account"
+    - entity: account
+      trait: mrr
+      source: "Current MRR from billing system"
+    - entity: account
+      trait: active_users_30d
+      source: "COUNT of users with events in last 30 days"
+```
+
+Every analytics tool uses traits for segmentation — they're how you slice event data by account size, plan, usage level, or any other dimension. Don't treat trait design as an afterthought.
 
 ### 7. Define Group Hierarchy
 
@@ -195,7 +243,23 @@ groups:
     traits: [name, created_at]
 ```
 
+**B2C products** may not need group hierarchy — users are the primary entity. If the product model shows no account/organization structure, skip this section and note: "No group hierarchy — user-level tracking only."
+
+**System recommendations:** If group hierarchy is beneficial, note which analytics systems handle it well:
+- **Strong group support:** Segment (native group calls), Mixpanel (group analytics), PostHog (group analytics)
+- **Limited group support:** Amplitude (requires group identify workarounds), GA4 (no native groups)
+
 **Forge note:** If the product runs on Atlassian Forge, the top-level group must use `cloudId` as the group ID (see `references/forge-platform.md`). Include `domain` (e.g., `acme.atlassian.net`) as a group trait. Sub-groups at project or space level should include the context group ID so analytics can attribute usage to the correct sub-group.
+
+**group() call trigger points.** For each group level, specify when group() calls should fire:
+
+| Trigger | Example | Why |
+|---------|---------|-----|
+| **Creation** | Account created, workspace created | Establish the group in analytics |
+| **Trait change** | Plan upgrade, MRR change, rename | Keep group traits current |
+| **Scheduled sync** | Daily snapshot of member_count, usage stats | Traits that change without user action |
+
+Don't leave group() timing to the implementation phase — decide it here. At minimum, every group needs creation + trait-change triggers. Add scheduled sync if the group has snapshot traits.
 
 ### 8. Assign Event Group Levels
 
@@ -213,10 +277,12 @@ Check against the category checklist:
 - [ ] **Core Value:** All primary actions tracked?
 - [ ] **Collaboration:** Team dynamics captured?
 - [ ] **Configuration:** Setup vs usage distinguishable?
-- [ ] **Billing:** Commercial signals present?
+- [ ] **Billing:** Commercial signals present? (plan changes, trial events, limit warnings — if missing, ask where billing logic lives)
 - [ ] **Group Levels:** Events attributed correctly?
 
 ### 10. Check Anti-Patterns and Cost
+
+Quick checklist (full details in [references/anti-patterns.md](references/anti-patterns.md)):
 
 - No PII in event properties (only in traits via identify)
 - No high-frequency noise (mouse moves, scrolls, keystrokes)
@@ -333,7 +399,7 @@ If no current state exists, note: "Delta requires the **product-tracking-audit-c
 
 3. **Less is more — and cheaper.** Start with fewer events. It's easy to add later, painful to remove. If you're unsure whether to include an event, don't. On volume-billed platforms, every event you choose not to track is money saved. Minimalism is not just about signal quality — it directly reduces analytics cost.
 
-4. **Properties over events.** `report.created` with `{ report_type: 'template' }` beats `template_report.created`. One event with a property is almost always better than two events. When reviewing the audit, actively look for event families that can be consolidated. Call this out as both a design improvement and a cost saving.
+4. **Properties over events — unless the destination doesn't support them.** `report.created` with `{ report_type: 'template' }` beats `template_report.created` — UNLESS the destination stores event names only (e.g., Accoil). In that case, encode distinctions in event names: `report.created_from_template`. Check destination constraints from Step 2 before applying this rule. One event with a property is almost always better than two events. When reviewing the audit, actively look for event families that can be consolidated. Call this out as both a design improvement and a cost saving.
 
 5. **Templates are invisible.** The user doesn't need to know you started from a template. The output should feel bespoke.
 
@@ -349,7 +415,14 @@ If no current state exists, note: "Delta requires the **product-tracking-audit-c
 
 11. **Read everything.** Read the full current-state.yaml before designing. Do not truncate. The delta depends on complete knowledge of current state.
 
+## Lifecycle
+
+```
+model → audit → design → guide → implement ← feature updates
+                  ^
+```
+
 ## Next Phase
 
 After design, suggest the user run:
-- **product-tracking-generate-implementation-guide** (e.g., *"create instrumentation guide"* or *"how to implement tracking"*) — translate the plan into SDK-specific instrumentation guidance
+- **product-tracking-generate-implementation-guide** — translate the plan into SDK-specific instrumentation guidance (e.g., *"create instrumentation guide"*, *"how to implement tracking"*, *"generate SDK guide"*)

@@ -1,6 +1,6 @@
 # Product Tracking Skills
 
-**Your B2B SaaS probably isn't data-ready. These skills fix that.**
+**Your product isn't data-ready. These skills fix that.**
 
 You're paying for Amplitude, Mixpanel, or PostHog — but you can't answer three basic questions: Which features do your customers actually use? Where do users drop off? Which accounts are at risk?
 
@@ -20,24 +20,20 @@ Product Tracking Skills is a set of open-source AI agent skills that scan your c
 Open your codebase in any AI agent tool and start talking:
 
 ```
-You: model this product
-AI:  [Scans routes, models, controllers — asks targeted questions]
-     Product model saved to .telemetry/product.md
-
 You: audit tracking
-AI:  [Finds every tracking call, checks what's live vs orphaned]
+AI:  [Finds every tracking call, identifies gaps and issues]
      Found 14 events across 8 files. Saved to .telemetry/current-state.yaml
 
 You: design tracking plan
-AI:  [Designs tracking plan, produces delta from current state]
-     22 events. Delta: add 10, rename 3, change 4, remove 1.
+AI:  [Designs best-practice tracking plan, produces delta from current state]
+     22 events. Delta: add 10, rename 3, change 4, remove 1. Review and adjust.
 
 You: implement tracking
-AI:  [Generates typed wrapper functions for your SDK]
-     Instrumentation code ready in instrumentation/
+AI:  [Generates typed wrapper functions, delivery infrastructure, event constants]
+     Tracking code ready in tracking/
 ```
 
-Six skills. One session. Data-ready.
+Seven skills. One session. Data-ready.
 
 ---
 
@@ -89,19 +85,20 @@ The skills encode the kind of knowledge that usually lives in a senior analytics
 
 ## How It Works
 
-Six phases. Each produces artifacts that feed the next. Everything version-controlled in your repo.
+Seven skills. Each produces artifacts that feed the next. Everything version-controlled in your repo.
 
 ```
-Model ──▶ Audit ──▶ Design ──▶ Instrument ──▶ Implement ──▶ Maintain
+Business Case ──▶ Model ──▶ Audit ──▶ Design ──▶ Instrument ──▶ Implement ──▶ Maintain
 ```
 
 | Phase | What Happens | You Get |
 |-------|-------------|---------|
+| **Business Case** | Builds a stakeholder-ready case for why product telemetry matters — blind spots, business value, effort involved | `.telemetry/business-case.md` |
 | **Model** | Scans your codebase to understand the product — entities, features, value flow | `.telemetry/product.md` |
 | **Audit** | Reverse-engineers current tracking. Every event, property, identity call. No judgment. | `.telemetry/current-state.yaml` |
 | **Design** | Designs an opinionated tracking plan + explicit delta from current state | `.telemetry/tracking-plan.yaml` + `delta.md` |
 | **Instrument** | Translates the plan into SDK-specific guidance with template code | `.telemetry/instrument.md` |
-| **Implement** | Generates real TypeScript types, typed SDK wrappers, identity management | `instrumentation/` directory |
+| **Implement** | Generates real typed wrapper functions, identity management, delivery infrastructure | `tracking/` directory |
 | **Maintain** | Updates tracking when features ship. Versioned with changelog. | Updated plan + `changelog.md` |
 
 ---
@@ -169,6 +166,7 @@ Everything lives in `.telemetry/` in your repo. Version-controlled. Survives acr
 
 ```
 .telemetry/
+├── business-case.md        # Why add telemetry — stakeholder-ready
 ├── product.md              # What your product does, entities, value flow
 ├── current-state.yaml      # What's tracked today (from audit)
 ├── tracking-plan.yaml      # What should be tracked
@@ -187,6 +185,7 @@ Each skill is self-contained with its own `references/` directory. Trigger them 
 
 | Skill | Try saying... |
 |-------|---------------|
+| `product-tracking-business-case` | *"write a business case for analytics"* or *"why add tracking?"* |
 | `product-tracking-model-product` | *"model this product"* or *"understand this codebase"* |
 | `product-tracking-audit-current-tracking` | *"audit tracking"* or *"what's currently tracked?"* |
 | `product-tracking-design-tracking-plan` | *"design tracking plan"* or *"what should we track?"* |

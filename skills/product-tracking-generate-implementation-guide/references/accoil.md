@@ -360,19 +360,6 @@ Accoil is account-centric. Without `group()` calls, events can't be attributed t
 - Account is created
 - Account traits change (upgrade, MRR change, cancellation)
 
-## Event Weighting
-
-Accoil uses event weights to calculate engagement scores (0-100). Weights are configured in Accoil's dashboard, not in code.
-
-| Event Type | Typical Weight | Example |
-|------------|----------------|---------|
-| Core value action | High | `Report_Created` |
-| Collaboration | Medium-High | `Teammate_Invited` |
-| Configuration | Medium | `Integration_Connected` |
-| Navigation | Low | `Page_Viewed` |
-
-Understanding this helps prioritize which events to track — high-weight events matter most for scoring.
-
 ## Account Traits That Matter
 
 | Trait | Why | Type |
