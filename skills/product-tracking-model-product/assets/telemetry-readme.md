@@ -1,6 +1,6 @@
 # .telemetry/
 
-This folder contains product telemetry artifacts — structured descriptions of what the product tracks, why, and how. It was created by the **Product Telemetry Engineer** skill set for Claude Code.
+This folder contains product telemetry artifacts — structured descriptions of what the product tracks, why, and how. It was created by **Product Tracking Skills**.
 
 ## What's in here
 
