@@ -1,6 +1,6 @@
 # End-to-End Walkthrough: Loom-Style Video Messaging
 
-This walkthrough shows the complete product telemetry engineering lifecycle for a fictional video messaging product called **Clipper** — from discovery through maintenance. It demonstrates how all six phases work together.
+This walkthrough shows the complete product tracking lifecycle for a fictional video messaging product called **Clipper** — from discovery through maintenance. It demonstrates how all seven skills work together.
 
 ---
 

@@ -7,6 +7,7 @@ This folder contains product telemetry artifacts — structured descriptions of 
 | File | Purpose | Created by |
 |------|---------|------------|
 | `README.md` | This file | **product-tracking-model-product** skill |
+| `business-case.md` | Why add telemetry — stakeholder-ready business case | **product-tracking-business-case** skill |
 | `product.md` | Product description — what it does, who uses it, how value flows | **product-tracking-model-product** skill |
 | `current-state.yaml` | Reverse-engineered tracking from the codebase | **product-tracking-audit-current-tracking** skill |
 | `tracking-plan.yaml` | Target tracking plan — what should be tracked | **product-tracking-design-tracking-plan** skill |
@@ -17,10 +18,10 @@ This folder contains product telemetry artifacts — structured descriptions of 
 
 ## Workflow
 
-These artifacts follow a six-phase lifecycle:
+These artifacts follow a seven-skill lifecycle:
 
 ```
-product-tracking-model-product → product-tracking-audit-current-tracking → product-tracking-design-tracking-plan → product-tracking-generate-implementation-guide → product-tracking-implement-tracking → product-tracking-instrument-new-feature
+product-tracking-business-case → product-tracking-model-product → product-tracking-audit-current-tracking → product-tracking-design-tracking-plan → product-tracking-generate-implementation-guide → product-tracking-implement-tracking ← product-tracking-instrument-new-feature
 ```
 
 Each phase reads upstream artifacts and produces its own. Phases can be replayed as the product evolves.
@@ -31,5 +32,5 @@ Each phase reads upstream artifacts and produces its own. Phases can be replayed
 
 ## Source
 
-Product Tracking Skills — a Claude Code skill set by Accoil.
+Product Tracking Skills — by Accoil.
 https://github.com/AccoilHQ/product-tracking-skills

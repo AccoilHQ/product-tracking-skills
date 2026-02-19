@@ -81,25 +81,69 @@ When designing events for a Forge app, classify each event by its trigger origin
 
 If a UI action already calls a backend resolver for its primary purpose (e.g., clicking "Create" calls a `create` resolver), the tracking should happen in that resolver — do not add a separate frontend event for it.
 
-## No User-Generated Content in Analytics
+## No End User Data in Analytics
 
-Forge apps must not send **any** user-generated content as event properties or traits. This is stricter than the general "no PII" rule.
+Forge apps must declare `inScopeEUD: false` on all analytics egress permissions to maintain "Runs on Atlassian" eligibility. This means analytics payloads must not contain **any** in-scope End User Data — user-generated content, personally identifiable information, or customer business data.
 
-**Prohibited:**
+This is stricter than the general "no PII" rule.
+
+**Prohibited (in-scope End User Data):**
 - Issue titles, summaries, descriptions
 - Page names, space names
 - Form content, comments, labels
 - Search queries containing user text
 - Custom field values
+- Any content a human typed
 
-**Allowed:**
+**Allowed (not in-scope EUD):**
 - System identifiers (cloudId, accountId, project IDs)
+- Site hostname / domain (e.g., `acme.atlassian.net`) — this is instance context, not end user data
 - Enumerated values (status, type, category)
 - Counts and aggregates (item_count, member_count)
 - Boolean states (is_active, has_custom_fields)
+- License type and status
 - Timestamps
 
-The test: if a human typed it, it cannot leave as analytics data.
+The test: if a human typed it, it cannot leave as analytics data. System-generated identifiers and instance context (site domain, license info) are acceptable.
+
+## Approved Analytics Destinations
+
+Forge enforces an allowlist of pre-approved analytics domains. Only these domains may be used with the `category: analytics` egress permission. Apps declaring unlisted domains will be **blocked from deployment**.
+
+**Requirements for analytics tools:**
+- Must be **cloud-only** — self-hosted tools are prohibited (Atlassian cannot verify self-hosted URLs aren't used for functional egress)
+- Must have a public website, documentation, and privacy policy
+- Must use a recognized fixed domain
+
+**Pre-approved domains (as of August 2025):**
+
+| Provider | Allowed Domains |
+|---|---|
+| **Accoil** | `in.accoil.com` |
+| **Amplitude** | `*.amplitude.com` |
+| **Google Analytics** | `*.google-analytics.com` |
+| **Google Tag Manager** | `*.googletagmanager.com` |
+| **Mixpanel** | `cdn.mxpnl.com`, `*.cdn.mxpnl.com`, `*.mixpanel.com` |
+| **PostHog** | `*.posthog.com` |
+| **Segment** | `*.cdn.segment.com`, `cdn.segment.com`, `*.api.segment.io` |
+| **Sentry** | `*.ingest.sentry.io`, `*.ingest.us.sentry.io`, `*.sentry-cdn.com` |
+| **HotJar** | `*.hotjar.io`, `*.hotjar.com` |
+| **LaunchDarkly** | `*.launchdarkly.com` |
+| **New Relic** | `*.newrelic.com` |
+| **Plausible** | `*.plausible.io` |
+| **Azure** | `*.applicationinsights.azure.com`, `*.monitor.azure.com` |
+| **Cloudflare** | `static.cloudflareinsights.com` |
+| **Fathom** | `*.cdn.usefathom.com` |
+| **Statsig** | `*.statsigapi.net`, `statsigapi.net`, `*.featureassets.org`, `featureassets.org`, `*.prodregistryv2.org`, `prodregistryv2.org` |
+| **UserPilot** | `*.userpilot.io` |
+| **Usermaven** | `*.events.usermaven.com`, `*.um.contentstudio.io` |
+| **Beam Analytics** | `*.beamanalytics.b-cdn.net` |
+| **Microanalytics** | `*.microanalytics.io` |
+| **WithCabin** | `*.scripts.withcabin.com` |
+| **Simple Analytics** | `*.scripts.simpleanalyticscdn.com` |
+| **Journy** | `*.journy.io` |
+
+To request approval for an unlisted tool, raise a support request with Atlassian. RudderStack is **not** on the approved list — if the tracking plan specifies RudderStack as destination for a Forge app, flag this as a constraint and recommend an approved alternative.
 
 ## Sub-Level Group Context
 
@@ -153,9 +197,9 @@ The Forge analytics architecture guarantees that the analytics provider never se
 - User IP addresses (only Forge server IPs are visible)
 - Internal Jira/Confluence URLs or referrer data
 - Browser user agent strings or session data
-- Any user-generated content (issue titles, form inputs, search queries)
+- Any end user data (issue titles, form inputs, search queries, display names)
 
-When designing a tracking plan, apply the test: **if a human typed it, it cannot leave as analytics data.** This is stricter than general "no PII" guidance. Design properties around system identifiers, enumerated values, counts, booleans, and timestamps — never around free-text user input.
+When designing a tracking plan, apply the test: **if a human typed it, it cannot leave as analytics data.** Site hostname/domain (e.g., `acme.atlassian.net`) is acceptable as instance context — it is not classified as in-scope End User Data. Design properties around system identifiers, instance context, enumerated values, counts, booleans, and timestamps — never around free-text user input.
 
 ## What Stays the Same
 
