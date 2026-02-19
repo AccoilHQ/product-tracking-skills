@@ -132,10 +132,34 @@ permissions:
 ```
 
 Key settings:
-- `inScopeEUD: false` — declares no End User Data is transmitted. Required for "Runs on Atlassian" compliance.
-- `category: analytics` — classifies the external fetch for Atlassian review.
+- `inScopeEUD: false` — declares no in-scope End User Data is transmitted. Required for "Runs on Atlassian" compliance. Analytics payloads must not contain user-generated content, PII, or customer business data. Site hostname/domain (e.g., `acme.atlassian.net`) is acceptable — it is instance context, not in-scope EUD.
+- `category: analytics` — classifies the external fetch for Atlassian review. Only pre-approved domains may use this category (see Approved Analytics Domains below).
 - `address` — hostname only (no `https://` prefix, no path).
 - Queue key must match between producer (`events.js`) and consumer manifest entry.
+
+### Approved Analytics Domains
+
+Forge enforces an allowlist of pre-approved domains for `category: analytics` egress. Apps declaring unlisted domains will be **blocked from deployment** (enforced since August 2025).
+
+**Requirements:** Analytics tools must be cloud-only (no self-hosted), have a public website and privacy policy, and use a recognized fixed domain.
+
+Common pre-approved domains for tracking plan destinations:
+
+| Destination | Address for manifest |
+|---|---|
+| **Accoil** | `in.accoil.com` |
+| **Amplitude** | `*.amplitude.com` |
+| **Mixpanel** | `*.mixpanel.com` |
+| **PostHog** | `*.posthog.com` |
+| **Segment** | `*.api.segment.io` |
+| **Google Analytics** | `*.google-analytics.com` |
+| **Sentry** | `*.ingest.sentry.io` |
+
+Other approved providers include HotJar, LaunchDarkly, New Relic, Plausible, Azure Application Insights, Cloudflare Web Analytics, Fathom, Statsig, UserPilot, and more. See the [Atlassian analytics tool policy](https://developer.atlassian.com/platform/forge/analytics-tool-policy/) for the full list.
+
+**RudderStack is not on the approved list.** If the tracking plan specifies RudderStack, use an approved alternative or raise a support request with Atlassian.
+
+To request approval for an unlisted tool, raise a support request with Atlassian.
 
 ## Identity Utilities
 
@@ -447,9 +471,9 @@ forge variables set --environment development ANALYTICS_DEBUG true
 | Standard init/shutdown | Manifest-declared consumers and triggers |
 | Any HTTP endpoint | Only addresses declared in `permissions.external.fetch` |
 
-## Privacy Protection Guarantees
+## Privacy Protection and End User Data
 
-This architecture eliminates entire classes of data leakage by design:
+This architecture eliminates entire classes of data leakage by design, ensuring `inScopeEUD: false` compliance:
 
 | Risk Category | Frontend Analytics | This Architecture |
 |---|---|---|
@@ -459,6 +483,18 @@ This architecture eliminates entire classes of data leakage by design:
 | **Session Data** | Cookies, localStorage exposed | No client-side data access |
 | **Form Inputs** | Accidentally captured PII | Only intentional business events |
 | **Navigation Patterns** | Full browsing history | Meaningful business actions only |
+
+**What must NOT be sent** (in-scope End User Data):
+- User-generated content: issue titles, descriptions, form inputs, comments, labels, search queries
+- Customer business data: custom field values, page content
+
+**What IS acceptable** (not in-scope EUD):
+- System identifiers: cloudId, accountId, project IDs
+- Site hostname/domain: e.g., `acme.atlassian.net` — this is instance context, not end user data
+- Enumerated values: status, type, category, license type
+- Counts and aggregates: item_count, member_count
+- Boolean states: is_active, has_custom_fields
+- Timestamps
 
 ## Key Architecture Principles
 
@@ -472,7 +508,10 @@ This architecture eliminates entire classes of data leakage by design:
 ## Implementation Checklist
 
 - [ ] `manifest.yml` has consumer, queue, scheduled trigger, and external fetch permissions
+- [ ] Analytics destination address is on the [Atlassian approved list](https://developer.atlassian.com/platform/forge/analytics-tool-policy/)
 - [ ] `inScopeEUD: false` is set on all analytics fetch permissions
+- [ ] No in-scope End User Data in any event properties or traits (user-generated content, PII, customer business data)
+- [ ] Site hostname/domain used only as instance context (acceptable, not in-scope EUD)
 - [ ] Queue key matches between `events.js` producer and manifest consumer
 - [ ] `@forge/api` fetch is used (not standard fetch)
 - [ ] Frontend sends only event names via `invoke()` — no properties, no context
@@ -480,4 +519,3 @@ This architecture eliminates entire classes of data leakage by design:
 - [ ] Scheduled analytics send group traits with domain and license status
 - [ ] Debug mode works via `ANALYTICS_DEBUG` environment variable
 - [ ] Error handling: consumer re-throws to trigger Forge retry
-- [ ] No user-generated content in any event properties or traits

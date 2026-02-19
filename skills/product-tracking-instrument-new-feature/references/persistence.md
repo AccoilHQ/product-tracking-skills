@@ -1,6 +1,6 @@
 # Persistence: The .telemetry/ Folder
 
-Product telemetry engineering produces artifacts that must persist across sessions, engineers, and time. The `.telemetry/` folder in your repository is the canonical location for these artifacts.
+Product tracking produces artifacts that must persist across sessions, engineers, and time. The `.telemetry/` folder in your repository is the canonical location for these artifacts.
 
 ## Folder Structure
 
